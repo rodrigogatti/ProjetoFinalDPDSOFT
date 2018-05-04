@@ -1,17 +1,19 @@
 import pygame
 
+white = (255,255,255)
+black = (0,0,0)
+red = (255,0,0)
+green = (0,155,0)
+
+block_size = 10
+FPS = 30
+
 
 class principal(object):
 
     def __init__(self):
         pygame.init()
-        pygame.display.set_caption("Guerra da Geometria")#Titulo
-        self.width = 600#Altura
-        self.height = 480#Largura
-        self.screen = pygame.display.set_mode((self.width, self.height), pygame.DOUBLEBUF)
-        self.background = pygame.Surface(self.screen.get_size()).convert()
-        icon = pygame.image.load("icone.ico")#Carregar icone
-        self.icon=pygame.display.set_icon(icon)#Fazer icone aparecer 
+        tela = pygame.display.set_mode((1200,720))
         self.clock = pygame.time.Clock()
         self.fps = 30#Frames por segundo
 

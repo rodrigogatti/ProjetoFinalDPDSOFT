@@ -7,7 +7,8 @@ Created on Sat Apr 28 17:20:02 2018
 
 import pygame,sys,time
 from pygame.locals import *
-import tela
+import tela as tela
+import teste as teste
 
 
 def menu():
@@ -114,7 +115,7 @@ def menu():
                     start=[350,405]
             
                 elif markerp==1 and event.key==pygame.K_RETURN:
-                    tela()
+                    teste.principal()
             
                 elif markerp==3 and event.key==pygame.K_RETURN:
                     pygame.mixer.music.fadeout(2)

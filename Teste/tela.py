@@ -2,7 +2,7 @@ import pygame,sys,time
 from pygame.locals import *
 
 
-def tela():
+def window():
     pygame.init()
     pygame.mixer.init()
     fonte=pygame.font.Font("moonhouse.ttf", 40)
@@ -31,5 +31,3 @@ def tela():
                     
      
 #Rodar o jogo automaticamente
-if __name__=="__main__":
-    tela()
