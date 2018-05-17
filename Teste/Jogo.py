@@ -9,8 +9,8 @@ Created on Sat Apr 28 20:30:34 2018
 import pygame
 import time
 import random
-import camera as c_mov 
-import mapa 
+#import camera as c_mov 
+#import mapa 
 
 vector=pygame.math.Vector2
 
@@ -19,16 +19,19 @@ pygame.mixer.init()
 
 #---------------------------------------------------------------------------------------------------------
 #Funções e classes que formam o jogo
-class jogador():
+class jogador:
+    #define os parametros iniciais
     def __init__(self,x,y):
         self.image = ship
         self.rect = self.image.get_rect()
         self.hitbox_rect = hitbox
         self.hitbox_rect.center = self.rect.center        
         self.velocidade=vector(0,0)
-        self.posicao=vector(x,y)*16
+        self.posicao=vector(x,y)*32
         self.rotacao=0
-
+        
+    #Cria movimentação de acorodo com as teclas
+    #Adiciona rotação
     def teclas(self):
         self.rotacao_vel=0
         self.velocidade=vector(0,0)
@@ -43,36 +46,57 @@ class jogador():
             self.velocidade=vector(velocidade_player,0).rotate(-self.rotacao)
         if key[pygame.K_DOWN]:
             self.velocidade=vector(-velocidade_player,0).rotate(-self.rotacao)
-
+    
+    #Update no sprite e na imagem dele para q a rotação seja visivel
     def update(self, surface):
         self.teclas()
         self.rotacao=(self.rotacao+self.rotacao_vel*dt)%360
         
+        #Define a rotaçao da imagem sem distorcer
+        #Centraliza o rect para ter uma rotação "Smooth"
         self.image=pygame.transform.rotate(ship,self.rotacao)
-        self.rect=self.image.get_rect()
+
+        self.rect=self.image.get_rect(center=self.rect.center)
+        
         self.rect.center=self.posicao
-        self.posicao+= self.velocidade 
         
-        self.posicao= self.posicao+self.velocidade*dt
-        
-        self.rect.centerx=self.posicao.x
-        self.rect.centery=self.posicao.y
-        
-        surface.blit(self.image,(self.posicao))
+        self.posicao=self.posicao + self.velocidade *dt
         
         
+        surface.blit(self.image,(self.rect))
+
         
+        
+class Camera:
+    #define os parametros iniciais
+    def __init__(self, display_width, display_height):
+        self.camera = pygame.Rect(0, 0, display_width , display_height)
+        self.width = display_width
+        self.height = display_height
+
+    def aplicar(self, entity):
+        return entity.rect.move(self.camera.topleft)
+
+    #Limita a movimetação nas bordas
+    def update(self, target):
+        x = -target.rect.x + int(display_width / 2)
+        y = -target.rect.y + int(display_height/ 2)
+        x = min(0, x)  
+        y = min(0, y)  
+        x = max(-(self.width - display_width), x)  
+        y = max(-(self.height - display_height), y)  
+        self.camera = pygame.Rect(x, y, self.width, self.height)
         
         
 #---------------------------------------------------------------------------------------------------------
 #Definiçoes gerais de imagens,sons e tamanhos
-display_width = 800
-display_height = 600
+display_width = 1024
+display_height = 768
 
-velocidade_player=250
+velocidade_player=350
 velocidade_rotacao=250
 
-hitbox=pygame.Rect(0, 0, 35,96 )
+hitbox=pygame.Rect(0, 0, 32, 32)
 
 clock = pygame.time.Clock()
 fps = 60
@@ -85,7 +109,7 @@ metade_h=int(display_height/ 2)
 gameDisplay = pygame.display.set_mode((display_width,display_height))
 fundo=pygame.image.load('fundo.jpg')
 pygame.display.set_caption("Guerra das formas")
-ship=pygame.image.load("nave.png")
+ship=pygame.image.load("12.png")
 
 navezinha=jogador(0,0)
 
@@ -110,9 +134,11 @@ def gameLoop():
     global cameraX, cameraY 
     pygame.mixer.music.load(jogo)
     pygame.mixer.music.play(-1)    
+    jogador(metade_h,metade_w)
     
-    jogador.cam=c_mov.camera(display_width,display_height)
-    map=mapa.mapa_basico("mapa1.txt")
+    #map=mapa.mapa_basico("mapa1.txt")
+    #camera = Camera(map.width, map.height)
+    
     
     gameExit = False
     gameOver = False
@@ -135,20 +161,24 @@ def gameLoop():
                         gameLoop()
                         
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT :
                 gameExit = True
                 
         navezinha.teclas()
+        #camera.update(jogador.update)
         gameDisplay.blit(fundo, (0,0))
         
         navezinha.update(gameDisplay)
         
         
+        
         clock.tick(fps)
         pygame.display.update()
-
+    
     
     pygame.quit()
     quit()
 
 #---------------------------------------------------------------------------------------------------------
+if __name__=="__main__":
+    gameLoop()
