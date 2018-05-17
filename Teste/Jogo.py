@@ -26,7 +26,7 @@ class jogador:
         self.hitbox_rect = hitbox
         self.hitbox_rect.center = self.rect.center        
         self.velocidade=vector(0,0)
-        self.posicao=vector(x,y)*32
+        self.posicao=vector(metade_w,metade_h)
         self.rotacao=0
         
     #Cria movimentação de acorodo com as teclas
@@ -63,28 +63,9 @@ class jogador:
         
         
         surface.blit(self.image,(self.rect))
-
         
-        
-class Camera:
-    #define os parametros iniciais
-    def __init__(self, display_width, display_height):
-        self.camera = pygame.Rect(0, 0, display_width , display_height)
-        self.width = display_width
-        self.height = display_height
 
-    def aplicar(self, entity):
-        return entity.rect.move(self.camera.topleft)
-
-    #Limita a movimetação nas bordas
-    def update(self, target):
-        x = -target.rect.x + int(display_width / 2)
-        y = -target.rect.y + int(display_height/ 2)
-        x = min(0, x)  
-        y = min(0, y)  
-        x = max(-(self.width - display_width), x)  
-        y = max(-(self.height - display_height), y)  
-        self.camera = pygame.Rect(x, y, self.width, self.height)
+    
         
         
 #---------------------------------------------------------------------------------------------------------
@@ -105,8 +86,21 @@ dt = clock.tick(fps) / 1000.0
 metade_w=int(display_width  / 2)
 metade_h=int(display_height/ 2)
 
+#Definindo melhor o fundo para a interação com a camera
 gameDisplay = pygame.display.set_mode((display_width,display_height))
-fundo=pygame.image.load('fundo.jpg')
+fundo=pygame.image.load('fundo.jpg').convert()
+#fundoWidth,fundoHeight=fundo.get_rect()
+
+#comprimento_tela=fundoWidth*2
+#altura_tela=fundoHeight*2
+#telaPosX=0
+
+#comeca_scroll_x=metade_w #quando a tela começa a mexer em x
+#comeca_scroll_y=metade_h #quando a tela começa a mexer em y
+
+#raio_circulo=25
+
+
 pygame.display.set_caption("Guerra das formas")
 ship=pygame.image.load("12.png")
 
