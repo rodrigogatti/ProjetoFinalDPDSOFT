@@ -8,7 +8,7 @@ Created on Sat Apr 28 17:20:02 2018
 import pygame,sys,time
 from pygame.locals import *
 import Jogo as jogo
-import camera as cam
+
 
 def menu():
     pygame.init()

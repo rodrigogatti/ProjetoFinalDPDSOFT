@@ -9,7 +9,7 @@ Created on Sat Apr 28 20:30:34 2018
 import pygame
 import time
 import random
-import camera 
+
 
 vector=pygame.math.Vector2
 
