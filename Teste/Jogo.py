@@ -9,8 +9,7 @@ Created on Sat Apr 28 20:30:34 2018
 import pygame
 import time
 import random
-#import camera as c_mov 
-#import mapa 
+import camera 
 
 vector=pygame.math.Vector2
 
@@ -136,8 +135,8 @@ def gameLoop():
     pygame.mixer.music.play(-1)    
     jogador(metade_h,metade_w)
     
-    #map=mapa.mapa_basico("mapa1.txt")
-    #camera = Camera(map.width, map.height)
+    
+    #camera = Camera(display_width, display_height)
     
     
     gameExit = False
