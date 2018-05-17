@@ -92,8 +92,8 @@ class Camera:
 display_width = 1024
 display_height = 768
 
-velocidade_player=350
-velocidade_rotacao=250
+velocidade_player=550
+velocidade_rotacao=300
 
 hitbox=pygame.Rect(0, 0, 32, 32)
 
