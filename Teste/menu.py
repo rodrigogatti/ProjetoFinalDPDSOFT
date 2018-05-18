@@ -5,7 +5,7 @@ Created on Sat Apr 28 17:20:02 2018
 @author: mathe
 """
 
-import pygame,sys,time
+import pygame#,sys,time
 from pygame.locals import *
 import Jogo as jogo
 
