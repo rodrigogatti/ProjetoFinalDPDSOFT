@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu May 23 00:45:49 2018
+Created on Wed May 23 00:45:49 2018
 
 @author: mathe
 """
 
-import pygame,sys 
+import pygame,sys,random
 #--------------------------------------------------------------------------------------------------------------------
 #Definições
+pygame.mixer.init()
 #Tela
 altura=768
 largura=1024
@@ -21,6 +22,20 @@ dt=clock.tick(fps) / 1000.0
 vector=pygame.math.Vector2
 
 imagem_fundo=pygame.image.load("fundo.jpg")
+imagem_borda=pygame.image.load("borda.png")
+
+#inimigo
+#imagem_inimigo1=pygame.image.load("hexagono.png")
+imagem_inimigos=[pygame.image.load("hexagono.png"),pygame.image.load("circulo.png"),pygame.image.load("linhatriangulos.png"),pygame.image.load("losango.png"),pygame.image.load("quadrado.png"),pygame.image.load("retangulo.png"),pygame.image.load("triangulo.png"),]
+velocidade_inimigo=450
+hitbox_inimigo=pygame.Rect(0,0,32,32)
+
+#tiro
+imagem_tiro=pygame.image.load("bala_teste.png")
+velocidade_tiro=700
+tempos_spawn_tiro=2000
+firerate_tiro=200
+tiro_frente=vector(50,0)#para o tiro sair da frente da nave e nao do meio do sprite
 
 tamanho_tile=32
 altura_grid=altura/tamanho_tile
@@ -30,16 +45,14 @@ largura_grid=largura/tamanho_tile
 jogo="tema.mp3"
 GameOver="GameOver.mp3"
 som="explosao.wav"
+som_tiro=pygame.mixer.Sound("tiro.ogg")
 
 #Jogador
 velocidade_jogador=550
 rotacao_jogador=300
-imagem_jogador=pygame.image.load("3.png")
+#imagem_jogador=pygame.image.load("3.png")
+imagem_jogador=[pygame.image.load("sprite_0.png"),pygame.image.load("sprite_1.png"),pygame.image.load("sprite_2.png"),pygame.image.load("sprite_3.png"),pygame.image.load("sprite_4.png"),pygame.image.load("sprite_5.png"),pygame.image.load("sprite_6.png")]
 hitbox_jogador=pygame.Rect(0,0,32,32)
-
-#Tiro
-
-#Inimigos
 #--------------------------------------------------------------------------------------------------------------------
 #Classes e funções(menos o jogo principal)
 
@@ -50,7 +63,7 @@ class jogador(pygame.sprite.Sprite):
         self.groups=loopPrincipal.all_sprites
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game=loopPrincipal
-        self.image = imagem_jogador
+        self.image = random.choice(imagem_jogador)
         self.rect = self.image.get_rect()
         #self.rect=pygame.Rect(x, y, 32, 32)
         self.hitbox_rect = hitbox_jogador
@@ -77,6 +90,14 @@ class jogador(pygame.sprite.Sprite):
             self.velocidade=vector(velocidade_jogador,0).rotate(-self.rotacao)
         if key[pygame.K_DOWN]:
             self.velocidade=vector(-velocidade_jogador,0).rotate(-self.rotacao)
+        if key[pygame.K_SPACE]:
+            momento=pygame.time.get_ticks()
+            if momento - self.ultimo > firerate_tiro:
+                som_tiro.play()
+                self.ultimo=momento
+                dir=vector(1,0).rotate(-self.rotacao)
+                posicao_tiro=self.posicao+tiro_frente.rotate(-self.rotacao)
+                Tiro(self.game,posicao_tiro,dir)
             
     #Colisao com os limites do mapa  
     def parede_colisao(self, dir):
@@ -106,21 +127,42 @@ class jogador(pygame.sprite.Sprite):
         
         #Define a rotaçao da imagem sem distorcer
         #Centraliza o rect para ter uma rotação "Smooth"
-        self.image=pygame.transform.rotate(imagem_jogador,self.rotacao)
+        self.image=pygame.transform.rotate(random.choice(imagem_jogador),self.rotacao)
         self.rect=self.image.get_rect(center=self.rect.center)
         
         self.rect.center=self.posicao
         self.posicao=self.posicao + self.velocidade *dt
         
         self.hitbox_rect.centerx = self.posicao.x
-        self.parede_colisao('x')
+        parede_colisao(self,self.game.limitadores,'x')
         self.hitbox_rect.centery = self.posicao.y
-        self.parede_colisao('y')
+        parede_colisao(self,self.game.limitadores,'y')
         
         self.rect.center = self.hitbox_rect.center        
 
-        surface.blit(self.image,(self.rect))  
-
+        #surface.blit(self.image,(self.rect))  
+        
+#Colisao com os limites para qualquer objeto        
+def parede_colisao(sprite, group ,dir):
+    if dir == 'x':
+        colidiu=pygame.sprite.spritecollide(sprite, group, False,colidiu_func)
+        if colidiu:
+            if sprite.velocidade.x > 0:
+                sprite.posicao.x = colidiu[0].rect.left - sprite.hitbox_rect.width / 2.0
+            if sprite.velocidade.x < 0:
+                sprite.posicao.x = colidiu[0].rect.right + sprite.hitbox_rect.width/ 2.0
+            sprite.velocidade.x = 0
+            sprite.hitbox_rect.centerx = sprite.posicao.x
+    if dir == 'y':
+        colidiu = pygame.sprite.spritecollide(sprite, group, False, colidiu_func)
+        if colidiu:
+            if sprite.velocidade.y > 0:
+                sprite.posicao.y = colidiu[0].rect.top - sprite.hitbox_rect.width/ 2.0
+            if sprite.velocidade.y < 0:
+                sprite.posicao.y = colidiu[0].rect.bottom + sprite.hitbox_rect.height / 2.0
+            sprite.velocidade.y = 0
+            sprite.hitbox_rect.centery = sprite.posicao.y   
+            
 #Colisao com rect         
 def colidiu_func(objeto_1,objeto_2):
     return objeto_1.hitbox_rect.colliderect(objeto_2.rect)
@@ -132,7 +174,8 @@ class Limite_fisico(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game = loopPrincipal
         self.image = pygame.Surface((tamanho_tile, tamanho_tile))
-        self.image.fill((150,0,77))
+        #self.image.fill((150,0,77))
+        self.image=imagem_borda
         self.rect = self.image.get_rect()
         self.x = x
         self.y = y
@@ -172,11 +215,72 @@ class Cam:
         y = max(-(self.altura - altura), y)  
         self.camera = pygame.Rect(x, y, self.largura, self.altura)
         
+#inimigos
+class Inimigo(pygame.sprite.Sprite):
+    def __init__(self, loopPrincipal, x, y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+        self.image=random.choice(imagem_inimigos)
+        self.imagem=self.image
+        self.rect=self.image.get_rect()
+        self.hitbox_rect=hitbox_inimigo.copy()
+        self.hitbox_rect.center = self.rect.center  
+        self.posicao=vector(x,y)*tamanho_tile
+        self.velocidade=vector(0,0)
+        self.aceleracao=vector(0,0)
+        self.rect.center=self.posicao
+        self.rotacao=0
+        
+    def update(self,surface):
+        self.rotacao=(self.game.jogador.posicao-self.posicao).angle_to(vector(1,0))
+        self.image=pygame.transform.rotate(self.imagem,self.rotacao)
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+        
+        self.aceleracao=vector(velocidade_inimigo,0).rotate(-self.rotacao)
+        self.aceleracao=self.aceleracao+self.velocidade*-1
+        self.velocidade=self.velocidade+self.aceleracao*dt
+        
+        self.posicao=self.posicao+self.velocidade*dt+0.5*self.aceleracao*dt**2
+        self.hitbox_rect.centerx=self.posicao.x
+        parede_colisao(self,self.game.limitadores,'x')
+        self.hitbox_rect.centery=self.posicao.y
+        parede_colisao(self,self.game.limitadores,'y')
+        self.rect.center=self.hitbox_rect.center
+
+#Tiro
+class Tiro(pygame.sprite.Sprite):
+    def __init__(self, loopPrincipal, posicao, dir):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.tiros
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = loopPrincipal
+        self.image = imagem_tiro
+        self.rect=self.image.get_rect()
+        self.posicao=vector(posicao)
+        self.rect.center=posicao
+        self.velocidade=dir*velocidade_tiro
+        self.spawn=pygame.time.get_ticks()
+        self.rotacao=0
+        
+    def update(self,surface):
+        #self.rotacao=(self.game.jogador.posicao+self.posicao).angle_to(vector(1,0))
+        self.posicao=self.posicao+self.velocidade*dt
+        self.rect.center=self.posicao
+        #self.image=pygame.transform.rotate(self.image,self.rotacao)
+        if pygame.sprite.spritecollideany(self,self.game.limitadores):
+            self.kill()
+        
+        if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
+            self.kill()
+        
+        
 #--------------------------------------------------------------------------------------------------------------------
 #Loop principal
 class loopPrincipal:
     def __init__(self):
         pygame.init()
+        pygame.mixer.init()
         self.tela=pygame.display.set_mode((largura,altura))
         pygame.display.set_caption("Guerra da Geometria")
         self.clock=pygame.time.Clock()
@@ -187,6 +291,8 @@ class loopPrincipal:
     def dar_load(self):
         self.all_sprites=pygame.sprite.Group()
         self.limitadores=pygame.sprite.Group()
+        self.inimigos=pygame.sprite.Group()
+        self.tiros=pygame.sprite.Group()
         
         for linhas,tile_1 in enumerate(self.map.local):
             for colunas ,tile_2 in enumerate(tile_1):
@@ -194,6 +300,15 @@ class loopPrincipal:
                     Limite_fisico(self,colunas,linhas)
                 if tile_2=="J":
                     self.jogador=jogador(self,colunas,linhas)
+                if tile_2=="I":
+                    Inimigo(self,colunas,linhas)  
+        numero_inimigos=0
+        #for x in range(0,64):
+            #for y in range(0,29):
+                #while numero_inimigos <=6:
+                   # Inimigo(self,x,y)
+                   # numero_inimigos+=1
+        
         self.camera=Cam(self.map.largura,self.map.altura)
         
     def roda(self):
@@ -212,6 +327,11 @@ class loopPrincipal:
         self.all_sprites.update(self.tela)
         self.camera.update(self.jogador)
         
+        hitou=pygame.sprite.groupcollide(self.inimigos,self.tiros,False,True)
+        for hit in hitou:
+            hit.kill()
+        
+        
     def blitar(self):
         pygame.display.set_caption("{:.2f}".format(self.clock.get_fps()))
         self.tela.fill((0,0,0))
@@ -227,22 +347,10 @@ class loopPrincipal:
             if evento.type==pygame.K_ESCAPE:
                 self.sair()
                 
-
-    def show_start_screen(self):
-        pass
-
-    def show_go_screen(self):
-        pass
-
-def start():
-    jogo = loopPrincipal()
-    jogo.show_start_screen()
-    while True:
-        jogo.dar_load()
-        jogo.roda()
-        jogo.show_go_screen()
-    
-                
-                
-    
+#Função chamada pelo menu para iniciar o jogo
+#def start():
+jogo = loopPrincipal()
+while True:
+    jogo.dar_load()
+    jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
