@@ -5,7 +5,7 @@ Created on Sat Apr 28 17:20:02 2018
 @author: mathe
 """
 
-import pygame#,sys,time
+import pygame,sys,time,random
 from pygame.locals import *
 import Jogo as jogo
 
@@ -29,11 +29,11 @@ def menu():
     #Opçoes do menu
     
     jogar=fonte.render("Jogar",1,(254, 254, 254))
-    tutorial=fonte.render("Tutorial",1,(254, 254, 254))
+    tutorial=fonte.render("Highscore",1,(254, 254, 254))
     sair=fonte.render("Sair",1,(254, 254, 254))    
     
     jogar_selecionado=fonte.render("Jogar",1,(76, 255, 254))
-    tutorial_selecionado=fonte.render("Tutorial",1,(76, 255, 254))
+    tutorial_selecionado=fonte.render("Highscore",1,(76, 255, 254))
     sair_selecionado=fonte.render("Sair",1,(76, 255, 254))    
     
     js=jogar_selecionado
@@ -117,7 +117,7 @@ def menu():
                     start=[350,405]
             
                 elif markerp==1 and event.key==pygame.K_RETURN:
-                    jogo.gameLoop()
+                    jogo.start()
             
                 elif markerp==3 and event.key==pygame.K_RETURN:
                     pygame.mixer.music.fadeout(2)

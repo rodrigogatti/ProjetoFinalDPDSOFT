@@ -75,6 +75,7 @@ class inimigos(pygame.sprite.Sprite):
 		self.hexagono1 = pygame.image.load(hexagono1)
 		self.quadrdado1 = pygame.image.load(quadrdado1)
 		self.tela = tela
+		self.passo  = 0
 		self.passo1 = 0
 		self.passo2 = 0
 		self.passo3 = 0
@@ -151,8 +152,7 @@ class tiros(pygame.sprite.Sprite):
 		self.rect.y = y
 
 	def desenha(self):
-		self.tela.blit(self.image,(self.rect.x,
-									self.rect.y))        
+		self.tela.blit(self.image,(self.rect.x,self.rect.y))        
         
 #---------------------------------------------------------------------------------------------------------
 #Definiçoes gerais de imagens,sons e tamanhos
@@ -204,7 +204,7 @@ jogo="jogo.mp3"
 GameOver="GameOver.mp3"
 som="explosao.wav"
 
-def fim_de_jogo(msg,color):
+def \(msg,color):
     screen_text = font.render(msg, True, color)
     gameDisplay.blit(screen_text, [display_width/2, display_height/2])
 
@@ -245,6 +245,7 @@ def gameLoop():
                 gameExit = True
                 
         navezinha.teclas()
+	inimigos.update()
         #camera.update(jogador.update)
         gameDisplay.blit(fundo, (0,0))
         
