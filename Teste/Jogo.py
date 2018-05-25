@@ -83,7 +83,7 @@ class jogador(pygame.sprite.Sprite):
         self.hitbox_rect = hitbox_jogador
         self.hitbox_rect.center = self.rect.center        
         self.velocidade=vector(0,0)
-        self.posicao=vector(metade_largura,metade_altura)
+        self.posicao=vector(x,y)*tamanho_tile
         self.rotacao=0
         self.ultimo=0#tiro
         self.vidas=vidas_jogador
@@ -364,10 +364,7 @@ class loopPrincipal:
         self.limitadores=pygame.sprite.Group()
         self.inimigos=pygame.sprite.Group()
         self.tiros=pygame.sprite.Group()
-        
-        lista_linhas=[]
-        lista_colunas=[]  
-        inimiigo= []
+    
         
         for linhas,tile_1 in enumerate(self.map.local):
             for colunas ,tile_2 in enumerate(tile_1):
@@ -376,15 +373,11 @@ class loopPrincipal:
                 if tile_2=="J":
                     self.jogador=jogador(self,colunas,linhas)
                 if tile_2=="I":
-                    inimiigo.append(Inimigo(self,colunas,linhas))                
+                    Inimigo(self,colunas,linhas)              
                 
                 
-                lista_linhas.append(linhas)
-                lista_colunas.append(colunas)
                 
-                
-        
-          
+    
         self.camera=Cam(self.map.largura,self.map.altura)
         
     def roda(self):
@@ -405,7 +398,6 @@ class loopPrincipal:
         
         hitou=pygame.sprite.spritecollide(self.jogador,self.inimigos,False,colidiu_func)
         for hit in hitou:
-            som_colisao.play()
             self.jogador.vidas=self.jogador.vidas-1
             hit.velocidade=vector(0,0)       
             
@@ -426,7 +418,7 @@ class loopPrincipal:
             
     def blitar(self):
         pygame.display.set_caption("{:.2f}".format(self.clock.get_fps()))
-        self.tela.fill((0,0,0))
+        #self.tela.fill((0,0,0))
         self.tela.blit(imagem_fundo, (0,0))
         vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)
         for sprite in self.all_sprites:
@@ -444,7 +436,7 @@ class loopPrincipal:
 #def start():
 jogo = loopPrincipal()
 
-#while True:
-    #jogo.dar_load()
-    #jogo.roda()
+while True:
+    jogo.dar_load()
+    jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
