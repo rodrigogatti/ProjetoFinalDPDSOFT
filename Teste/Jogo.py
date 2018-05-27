@@ -6,16 +6,17 @@ Created on Wed May 23 00:45:49 2018
 """
 
 import pygame,sys,random
+from firebase import firebase #armezando os dados em nuvem , usando Firebase
 #--------------------------------------------------------------------------------------------------------------------
 #Definições
 pygame.mixer.init()
+pygame.font.init()
+
 #Tela
 altura=600
 largura=800
 metade_altura=altura/2
 metade_largura=largura/2
-
-
 
 clock=pygame.time.Clock()
 fps=60
@@ -26,14 +27,25 @@ vector=pygame.math.Vector2
 imagem_fundo=pygame.image.load("fundo.jpg")
 imagem_borda=pygame.image.load("borda.png")
 
+#score
+firebase=firebase.FirebaseApplication('https://guerradageometria.firebaseio.com/',None)
+if firebase.get('Estoque',None) is None:
+    highscore={"Highscore": 0} #estoque é representado por um dicionário
+else:
+    highscore=firebase.get('Estoque',None)
+    
+myfont = pygame.font.SysFont("monospace", 16)
+
 #inimigo
 #imagem_inimigo1=pygame.image.load("hexagono.png")
-imagem_inimigos=[pygame.image.load("hexagono.png"),pygame.image.load("circulo.png"),pygame.image.load("linhatriangulos.png"),pygame.image.load("losango.png"),pygame.image.load("quadrado.png"),pygame.image.load("retangulo.png"),pygame.image.load("triangulo.png"),]
+imagem_inimigos_1=[pygame.image.load("hexagono.png"),pygame.image.load("circulo.png"),pygame.image.load("linhatriangulos.png"),pygame.image.load("losango.png"),pygame.image.load("quadrado.png"),pygame.image.load("retangulo.png"),pygame.image.load("triangulo.png"),]
+imagem_inimigos_2=[pygame.image.load("inimigo_1.png"),pygame.image.load("inimigo_2.png"),pygame.image.load("inimigo_3.png")]
 velocidade_inimigo=[200,300,250,100,400,150,125]
-hitbox_inimigo=pygame.Rect(0,0,32,32)
+hitbox_inimigo=pygame.Rect(0,0,18,18)
 vida_inimigo=3
 dano_inimigo=1
 raio_desvio=50
+chance_inimigo=0.25
 
 #tiro
 imagem_tiro=pygame.image.load("bala_teste.png")
@@ -60,7 +72,7 @@ rotacao_jogador=300
 vidas_jogador=5
 #imagem_jogador=pygame.image.load("3.png")
 imagem_jogador=[pygame.image.load("sprite_0.png"),pygame.image.load("sprite_1.png"),pygame.image.load("sprite_2.png"),pygame.image.load("sprite_3.png"),pygame.image.load("sprite_4.png"),pygame.image.load("sprite_5.png"),pygame.image.load("sprite_6.png")]
-hitbox_jogador=pygame.Rect(0,0,32,32)
+hitbox_jogador=pygame.Rect(0,0,18,30)
 knockback=40
 imagem_vidacheia=pygame.image.load("vida_cheia.png")
 imagem_vidavazia=pygame.image.load("vida_vazia.png")
@@ -235,12 +247,12 @@ class Cam:
         self.camera = pygame.Rect(x, y, self.largura, self.altura)
         
 #inimigos
-class Inimigo(pygame.sprite.Sprite):
+class Inimigo_1(pygame.sprite.Sprite):
     def __init__(self, loopPrincipal, x, y):
         self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game=loopPrincipal
-        self.image=random.choice(imagem_inimigos)
+        self.image=random.choice(imagem_inimigos_1)
         self.imagem=self.image
         self.rect=self.image.get_rect()
         self.hitbox_rect=hitbox_inimigo.copy()
@@ -281,6 +293,51 @@ class Inimigo(pygame.sprite.Sprite):
         self.rect.center=self.hitbox_rect.center
         if self.vida <= 0:
             som_explosao.play()
+            inimugos_1.pop(1)
+            self.game.score += 10
+            if self.game.score > highscore['Highscore']:
+                highscore['Highscore'] = self.game.score            
+            self.kill()
+
+class Inimigo_2(pygame.sprite.Sprite):
+    def __init__(self, loopPrincipal, x, y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+        self.image=random.choice(imagem_inimigos_2)
+        self.imagem=self.image
+        self.rect=self.image.get_rect()
+        self.hitbox_rect=hitbox_inimigo.copy()
+        self.hitbox_rect.center = self.rect.center  
+        self.posicao=vector(x,y)*tamanho_tile
+        self.velocidade=vector(0,0)
+        self.rect.center=self.posicao
+        self.rotacao=0
+        self.rotacao_velocidade=100
+        self.vida=vida_inimigo
+
+    def update(self,surface):
+        self.rotacao=(self.rotacao+self.rotacao_velocidade*dt)%360
+        self.image=pygame.transform.rotate(self.imagem,self.rotacao)
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+        
+        self.velocidade=vector(velocidade_jogador,0).rotate(-self.rotacao)
+
+        self.posicao=self.posicao+self.velocidade*dt
+        
+        self.hitbox_rect.centerx=self.posicao.x
+        parede_colisao(self,self.game.limitadores,'x')
+        self.hitbox_rect.centery=self.posicao.y
+        parede_colisao(self,self.game.limitadores,'y')
+
+        self.rect.center=self.hitbox_rect.center
+        if self.vida <= 0:
+            som_explosao.play()
+            inimugos_2.pop(1)
+            self.game.score += 10
+            if self.game.score > highscore['Highscore']:
+                highscore['Highscore'] = self.game.score            
             self.kill()
             
 #Tiro
@@ -355,6 +412,7 @@ class loopPrincipal:
         self.tela=pygame.display.set_mode((largura,altura))
         pygame.display.set_caption("Guerra da Geometria")
         self.clock=pygame.time.Clock()
+        self.score=0
         self.map=Limite("limitacao.txt")
         pygame.mixer.music.load("jogo.mp3")
         pygame.mixer.music.play(-1)          
@@ -364,7 +422,16 @@ class loopPrincipal:
         self.limitadores=pygame.sprite.Group()
         self.inimigos=pygame.sprite.Group()
         self.tiros=pygame.sprite.Group()
-    
+        
+        global inimugos_1
+        global inimugos_2
+        global lista_linhas
+        global lista_colunas
+        
+        inimugos_1=[]
+        inimugos_2=[]
+        lista_linhas=[]
+        lista_colunas=[]
         
         for linhas,tile_1 in enumerate(self.map.local):
             for colunas ,tile_2 in enumerate(tile_1):
@@ -372,12 +439,11 @@ class loopPrincipal:
                     Limite_fisico(self.tela,self,colunas,linhas)
                 if tile_2=="J":
                     self.jogador=jogador(self,colunas,linhas)
-                if tile_2=="I":
-                    Inimigo(self,colunas,linhas)              
-                
-                
-                
-    
+                if 1<colunas<64:
+                    lista_colunas.append(colunas)
+                if 1<linhas<40:
+                    lista_linhas.append(linhas)                            
+                        
         self.camera=Cam(self.map.largura,self.map.altura)
         
     def roda(self):
@@ -394,15 +460,25 @@ class loopPrincipal:
     
     def update(self):
         self.all_sprites.update(self.tela)
-        self.camera.update(self.jogador)
+        self.camera.update(self.jogador)   
         
         hitou=pygame.sprite.spritecollide(self.jogador,self.inimigos,False,colidiu_func)
         for hit in hitou:
-            self.jogador.vidas=self.jogador.vidas-1
-            hit.velocidade=vector(0,0)       
+            collision=True
+            if collision == True:
+                hit.velocidade=vector(0,0)
+                self.jogador.vidas=self.jogador.vidas-1
+                self.jogador.collision_immune=True
+                collision_time=pygame.time.get_ticks()
+                
+                if pygame.time.get_ticks() + collision_time > 30000:   
+                    collision_immune = False            
+            
             
             if self.jogador.vidas<= 0:
                 som_explosao.play()
+                firebase.patch('/Estoque',highscore)
+                self.score = 0                
                 #explosao=Olha_a_explosao(self.jogador.rect.center,jogador)
                 #all_sprites.add(explosao)
                 self.rodar=False
@@ -423,6 +499,16 @@ class loopPrincipal:
         vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)
         for sprite in self.all_sprites:
             self.tela.blit(sprite.image,self.camera.apply(sprite))
+        
+        scoretext = myfont.render("Score: {0}, Highscore: {1}".format(self.score, highscore['Highscore']),1,(255,255,255))
+        self.tela.blit(scoretext, (5,10))        
+        vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)        
+        
+        while len(inimugos_1)<4:
+            inimugos_1.append(Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas)))   
+        while len(inimugos_2)<2:
+            inimugos_2.append(Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas)))               
+        
         pygame.display.flip()
         
     def eventos(self):
@@ -436,7 +522,8 @@ class loopPrincipal:
 #def start():
 jogo = loopPrincipal()
 
-while True:
-    jogo.dar_load()
-    jogo.roda()
+#while True:
+ #   jogo.dar_load()
+ #   jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
+firebase.patch('/Estoque',highscore) #colocar quando morrer
