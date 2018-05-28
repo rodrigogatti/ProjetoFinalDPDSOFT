@@ -415,7 +415,9 @@ class loopPrincipal:
         self.score=0
         self.map=Limite("limitacao.txt")
         pygame.mixer.music.load("jogo.mp3")
-        pygame.mixer.music.play(-1)          
+        pygame.mixer.music.play(-1) 
+        self.imunidade=False
+        self.ultimo_hit=0
         
     def dar_load(self):
         self.all_sprites=pygame.sprite.Group()
@@ -447,7 +449,7 @@ class loopPrincipal:
         self.camera=Cam(self.map.largura,self.map.altura)
         
     def roda(self):
-        self.rodar=True
+        self.rodar=True        
         while self.rodar:
             self.dt = self.clock.tick(fps) / 1000.0
             self.eventos()
@@ -460,32 +462,28 @@ class loopPrincipal:
     
     def update(self):
         self.all_sprites.update(self.tela)
-        self.camera.update(self.jogador)   
+        self.camera.update(self.jogador) 
+
+
+        if pygame.time.get_ticks() - self.ultimo_hit > 3000:
+            self.imunidade=False
         
-        hitou=pygame.sprite.spritecollide(self.jogador,self.inimigos,False,colidiu_func)
-        for hit in hitou:
-            collision=True
-            if collision == True:
+        if self.imunidade==False:
+            hitou=pygame.sprite.spritecollide(self.jogador,self.inimigos,False,colidiu_func)
+            for hit in hitou:
                 hit.velocidade=vector(0,0)
-                self.jogador.vidas=self.jogador.vidas-1
-                self.jogador.collision_immune=True
-                collision_time=pygame.time.get_ticks()
+                self.jogador.vidas=self.jogador.vidas-1                
+                self.ultimo_hit=pygame.time.get_ticks()
+                self.imunidade=True
                 
-                if pygame.time.get_ticks() + collision_time > 30000:   
-                    collision_immune = False            
-            
-            
-            if self.jogador.vidas<= 0:
-                som_explosao.play()
-                firebase.patch('/Estoque',highscore)
-                self.score = 0                
-                #explosao=Olha_a_explosao(self.jogador.rect.center,jogador)
-                #all_sprites.add(explosao)
-                self.rodar=False
-                            
-                
-        if hitou:
-            self.jogador.posicao=self.jogador.posicao+ vector(knockback, 0).rotate(-hitou[0].rotacao) 
+                if self.jogador.vidas<= 0:
+                    som_explosao.play()
+                    firebase.patch('/Estoque',highscore)
+                    self.score = 0                
+                    #explosao=Olha_a_explosao(self.jogador.rect.center,jogador)
+                    #all_sprites.add(explosao)
+                    self.rodar=False
+                                
             
         hitou=pygame.sprite.groupcollide(self.inimigos,self.tiros,False,True)
         for hit in hitou:
@@ -506,7 +504,7 @@ class loopPrincipal:
         
         while len(inimugos_1)<4:
             inimugos_1.append(Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas)))   
-        while len(inimugos_2)<2:
+        while len(inimugos_2)<3:
             inimugos_2.append(Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas)))               
         
         pygame.display.flip()
@@ -522,8 +520,8 @@ class loopPrincipal:
 #def start():
 jogo = loopPrincipal()
 
-#while True:
- #   jogo.dar_load()
- #   jogo.roda()
+while True:
+    jogo.dar_load()
+    jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
 firebase.patch('/Estoque',highscore) #colocar quando morrer
