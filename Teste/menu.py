@@ -42,11 +42,12 @@ def menu():
     exit=sair  
     
     #Musicas
-    musica1="musica.mp3"
+    musica1="tema.mp3"
     pygame.mixer.music.load(musica1) #MÃºsica
     pygame.mixer.music.play(-1)    
     
     global markerp
+    markerp = 1
     #variavel para o movimento do cursor
     mov=0
     start=[250,250]
@@ -60,23 +61,16 @@ def menu():
         tela.blit(exit, [330,450])
         tela.blit(pygame.image.load(cursor), start)
         
-       
-        
-        
-        
-        
         for event in pygame.event.get():
             if event.type == pygame.QUIT: 
                 pygame.mixer.music.fadeout(2)
-                mainloop=False
+                sys.exit()
                 
             elif event.type==pygame.KEYDOWN:
                 if event.key==K_ESCAPE:
                     som_select.play()
                     pygame.mixer.music.fadeout(2)
-                    mainloop=False
-                    
-                  
+                    sys.exit()
                     
                 elif js==jogar_selecionado and event.key==K_DOWN:
                     som_select.play()
@@ -130,13 +124,13 @@ def menu():
                     som_select.play()
                     jogo = loopPrincipal()
                     jogo.dar_load()
-                    jogo.roda()                    
+                    jogo.roda()  
+                    #jogo.GameOver()
             
                 elif markerp==3 and event.key==pygame.K_RETURN:
                     som_select.play()
                     pygame.mixer.music.fadeout(2)
                     sys.exit()
-            
             
             mov=mov+1
             pygame.display.update()            

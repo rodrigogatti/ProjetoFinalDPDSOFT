@@ -5,7 +5,8 @@ Created on Wed May 23 00:45:49 2018
 @author: mathe
 """
 
-import pygame,sys,random
+import pygame,sys,random,time
+import menu
 from firebase import firebase #armezando os dados em nuvem , usando Firebase
 #--------------------------------------------------------------------------------------------------------------------
 #Definições
@@ -35,6 +36,8 @@ else:
     highscore=firebase.get('Estoque',None)
     
 myfont = pygame.font.SysFont("monospace", 16)
+fonte_titulo=pygame.font.Font("moonhouse.ttf", 100)
+fonte_texto=pygame.font.Font("moonhouse.ttf", 30)
 
 #inimigo
 #imagem_inimigo1=pygame.image.load("hexagono.png")
@@ -65,13 +68,17 @@ GameOver="GameOver.mp3"
 som_explosao=pygame.mixer.Sound("explosao.ogg")
 som_tiro=pygame.mixer.Sound("tiro.ogg")
 som_colisao=pygame.mixer.Sound("hit.ogg")
+som_dano=pygame.mixer.Sound("dano.ogg")
+som_morte=pygame.mixer.Sound("morri.ogg")
 
 #Jogador
 velocidade_jogador=550
 rotacao_jogador=300
 vidas_jogador=5
 #imagem_jogador=pygame.image.load("3.png")
-imagem_jogador=[pygame.image.load("sprite_0.png"),pygame.image.load("sprite_1.png"),pygame.image.load("sprite_2.png"),pygame.image.load("sprite_3.png"),pygame.image.load("sprite_4.png"),pygame.image.load("sprite_5.png"),pygame.image.load("sprite_6.png")]
+#imagem_jogador=[pygame.image.load("sprite_0.png"),pygame.image.load("sprite_1.png"),pygame.image.load("sprite_2.png"),pygame.image.load("sprite_3.png"),pygame.image.load("sprite_4.png"),pygame.image.load("sprite_5.png"),pygame.image.load("sprite_6.png")]
+imagem_jogador=pygame.image.load("sprite_0.png")
+imagem_imune=[pygame.image.load("sprite_0.png"),pygame.image.load("imune.png")]
 hitbox_jogador=pygame.Rect(0,0,18,30)
 knockback=40
 imagem_vidacheia=pygame.image.load("vida_cheia.png")
@@ -89,9 +96,9 @@ class jogador(pygame.sprite.Sprite):
         self.groups=loopPrincipal.all_sprites
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.game=loopPrincipal
-        self.image = random.choice(imagem_jogador)
+        #self.image = random.choice(imagem_jogador)
+        self.image=imagem_jogador
         self.rect = self.image.get_rect()
-        #self.rect=pygame.Rect(x, y, 32, 32)
         self.hitbox_rect = hitbox_jogador
         self.hitbox_rect.center = self.rect.center        
         self.velocidade=vector(0,0)
@@ -156,8 +163,13 @@ class jogador(pygame.sprite.Sprite):
         
         #Define a rotaçao da imagem sem distorcer
         #Centraliza o rect para ter uma rotação "Smooth"
-        self.image=pygame.transform.rotate(random.choice(imagem_jogador),self.rotacao)
-        self.rect=self.image.get_rect(center=self.rect.center)
+        #self.image=pygame.transform.rotate(random.choice(imagem_jogador),self.rotacao)
+        if self.game.imunidade==False:
+            self.image=pygame.transform.rotate(imagem_jogador,self.rotacao)
+            self.rect=self.image.get_rect(center=self.rect.center)
+        if self.game.imunidade==True:
+            self.image=pygame.transform.rotate(random.choice(imagem_imune),self.rotacao)
+            self.rect=self.image.get_rect(center=self.rect.center)
         
         self.rect.center=self.posicao
         self.posicao=self.posicao + self.velocidade *dt
@@ -376,32 +388,6 @@ def vida_jogador(surface,x,y,vidas,imagem1,imagem2):
         imagem1_rect.y=y
         
         surface.blit(imagem1,imagem1_rect)
-        
-        
-#explosoes
-class Olha_a_explosao(pygame.sprite.Sprite):
-    def __init__(self, centro,tamanho):
-        pygame.sprite.Sprite.__init__(self)
-        self.tamanho=(45,45)
-        self.image=imagem_explosao[self.tamanho][0]
-        self.rect=self.image.get_rect
-        self.frame_inicial=0
-        self.ultimo_update=pygame.time.get_ticks()
-        self.framesPS=60
-        
-    def update(self):
-        momento=pygame.time.get_ticks()
-        if momento - self.ultimo_update > self.framesPS:
-            self.ultimo_update = momento
-            self.frame_inicial=self.frame_inicial+1
-            if self.frame_inicial == len(imagem_explosao[self.tamanho]):
-                self.kill()
-            else:
-                center=self.rect.center
-                self.image=imagem_explosao[self.size][self.frame_inicial]
-                self.rect=self.image.get_rect()
-                self.rect.center=center
-        
 #Game over
 #--------------------------------------------------------------------------------------------------------------------
 #Loop principal
@@ -418,6 +404,9 @@ class loopPrincipal:
         pygame.mixer.music.play(-1) 
         self.imunidade=False
         self.ultimo_hit=0
+        self.rodar=True
+        self.gameover=False 
+        self.placar=0
         
     def dar_load(self):
         self.all_sprites=pygame.sprite.Group()
@@ -449,17 +438,18 @@ class loopPrincipal:
         self.camera=Cam(self.map.largura,self.map.altura)
         
     def roda(self):
-        self.rodar=True        
-        while self.rodar:
+        while self.rodar==True:
             self.dt = self.clock.tick(fps) / 1000.0
             self.eventos()
-            self.update()
-            self.blitar()
+            if self.gameover==False:
+                self.update()
+            self.blitar()      
+        
             
     def sair(self):
         pygame.quit()
         sys.exit()
-    
+
     def update(self):
         self.all_sprites.update(self.tela)
         self.camera.update(self.jogador) 
@@ -471,41 +461,44 @@ class loopPrincipal:
         if self.imunidade==False:
             hitou=pygame.sprite.spritecollide(self.jogador,self.inimigos,False,colidiu_func)
             for hit in hitou:
+                som_dano.play()
                 hit.velocidade=vector(0,0)
-                self.jogador.vidas=self.jogador.vidas-1                
+                self.jogador.vidas=self.jogador.vidas-1  
                 self.ultimo_hit=pygame.time.get_ticks()
                 self.imunidade=True
                 
                 if self.jogador.vidas<= 0:
-                    som_explosao.play()
+                    som_morte.play()
                     firebase.patch('/Estoque',highscore)
-                    self.score = 0                
-                    #explosao=Olha_a_explosao(self.jogador.rect.center,jogador)
-                    #all_sprites.add(explosao)
-                    self.rodar=False
-                                
+                    self.score = 0 
+                    self.gameover=True
+                    pygame.mixer.music.load("GameOver.mp3")
+                    pygame.mixer.music.play(-1) 
             
         hitou=pygame.sprite.groupcollide(self.inimigos,self.tiros,False,True)
         for hit in hitou:
-            hit.vida=hit.vida-dano_tiro
+            hit.vida=hit.vida-dano_tiro  
             hit.velocidade=vector(0,0)
             
     def blitar(self):
-        pygame.display.set_caption("{:.2f}".format(self.clock.get_fps()))
-        #self.tela.fill((0,0,0))
-        self.tela.blit(imagem_fundo, (0,0))
-        vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)
-        for sprite in self.all_sprites:
-            self.tela.blit(sprite.image,self.camera.apply(sprite))
-        
-        scoretext = myfont.render("Score: {0}, Highscore: {1}".format(self.score, highscore['Highscore']),1,(255,255,255))
-        self.tela.blit(scoretext, (5,10))        
-        vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)        
-        
-        while len(inimugos_1)<4:
-            inimugos_1.append(Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas)))   
-        while len(inimugos_2)<3:
-            inimugos_2.append(Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas)))               
+        if self.gameover==False:
+            pygame.display.set_caption("{:.2f}".format(self.clock.get_fps()))
+            self.tela.blit(imagem_fundo, (0,0))
+            vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)
+            for sprite in self.all_sprites:
+                self.tela.blit(sprite.image,self.camera.apply(sprite))
+            
+            scoretext = myfont.render("Score: {0}, Highscore: {1}".format(self.score, highscore['Highscore']),1,(255,255,255))
+            self.placar=self.score
+            self.tela.blit(scoretext, (5,10))        
+            vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)        
+            
+            while len(inimugos_1)<5:
+                inimugos_1.append(Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas)))   
+            while len(inimugos_2)<3:
+                inimugos_2.append(Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas)))
+        elif self.gameover==True:
+            self.GameOver()
         
         pygame.display.flip()
         
@@ -516,12 +509,33 @@ class loopPrincipal:
             if evento.type==pygame.K_ESCAPE:
                 self.sair()
                 
+    def GameOver(self):
+        self.tela.fill((0,0,0)) 
+        self.text=fonte_titulo.render("Game Over", 1, (250,0,0))
+        self.tela.blit(self.text,(80,100))
+        
+        self.text_1=fonte_texto.render("O seu SCORE foi de {0}".format(self.placar), 1, (250,250,250))
+        self.tela.blit(self.text_1,(150,250))        
+        self.text_2=fonte_texto.render("Para voltar ao menu aperte M", 1, (250,250,250))
+        self.tela.blit(self.text_2,(150,300))
+        self.text_3=fonte_texto.render("Para jogar novamente aperte R", 1, (250,250,250))
+        self.tela.blit(self.text_3,(150,330))         
+                
+        key = pygame.key.get_pressed()
+        if key[pygame.K_m]:
+            menu.menu()
+        if key[pygame.K_r]: 
+            jogo = loopPrincipal()
+            jogo.dar_load()
+            jogo.roda()            
+        
 #Função chamada pelo menu para iniciar o jogo
 #def start():
-jogo = loopPrincipal()
 
-while True:
-    jogo.dar_load()
-    jogo.roda()
+#jogo = loopPrincipal()
+
+#while True:
+#    jogo.dar_load()
+#    jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
 firebase.patch('/Estoque',highscore) #colocar quando morrer
