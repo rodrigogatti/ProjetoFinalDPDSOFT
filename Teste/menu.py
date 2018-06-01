@@ -13,6 +13,7 @@ def menu():
     pygame.init()
     pygame.mixer.init()
     fonte=pygame.font.Font("moonhouse.ttf", 40)
+    fonte_titulo=pygame.font.Font("moonhouse.ttf", 90)
     
     #Tela
     cursor = ("cursor.png")
@@ -20,13 +21,14 @@ def menu():
     pygame.display.set_icon(icon)
     som_select=pygame.mixer.Sound("select.ogg")
     
-    pygame.display.set_caption("Guerra da Geometria")
+    pygame.display.set_caption("Eternal War")
     tela = pygame.display.set_mode((800,600))
     fundo=pygame.image.load('fundo_menu.png')
     frames=30
     relogio=pygame.time.Clock()
     
     #Opçoes do menu
+    menu=fonte_titulo.render("Eternal War",1,(185, 66, 244))
     
     jogar=fonte.render("Jogar",1,(254, 254, 254))
     tutorial=fonte.render("Highscore",1,(254, 254, 254))
@@ -55,6 +57,7 @@ def menu():
     while mainloop:
         tela.blit(fundo, (0,0))      
         tempo=relogio.tick(frames)
+        tela.blit(menu,[100,80])
         tela.blit(js, [330,250])
         tela.blit(tut, [330,350])
         tela.blit(exit, [330,450])

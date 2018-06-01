@@ -50,6 +50,14 @@ dano_inimigo=1
 raio_desvio=50
 chance_inimigo=0.25
 
+#boss 1
+imagem_boss_1=pygame.image.load("boss_1.png")
+velocidade_boss=100
+hitbox_boss_1=pygame.Rect(0,0,50,50)
+vida_boss=50
+dano_boss=2
+
+
 #tiro
 imagem_tiro=pygame.image.load("bala_teste.png")
 imagem_tiro_1=pygame.image.load("bala_1.png")
@@ -67,6 +75,7 @@ largura_grid=largura/tamanho_tile
 #bonus
 imagem_bonus=[pygame.image.load("bonus1.png"),pygame.image.load("bonus2.png"),pygame.image.load("bonus3.png"),pygame.image.load("bonus4.png"),pygame.image.load("bonus5.png"),pygame.image.load("bonus6.png"),pygame.image.load("bonus7.png"),pygame.image.load("bonus8.png"),pygame.image.load("bonus9.png"),pygame.image.load("bonus10.png"),pygame.image.load("bonus11.png"),pygame.image.load("bonus12.png"),]
 imagem_bonus_2=[pygame.image.load("bonus2_1.png"),pygame.image.load("bonus2_2.png"),pygame.image.load("bonus2_3.png"),pygame.image.load("bonus2_4.png"),pygame.image.load("bonus2_5.png"),pygame.image.load("bonus2_6.png"),pygame.image.load("bonus2_7.png"),pygame.image.load("bonus2_8.png"),pygame.image.load("bonus2_9.png"),pygame.image.load("bonus2_10.png"),pygame.image.load("bonus2_11.png"),pygame.image.load("bonus2_12.png"),]
+imagem_bonus_vida=[pygame.image.load("vida_bonus1.png"),pygame.image.load("vida_bonus2.png"),pygame.image.load("vida_bonus3.png"),pygame.image.load("vida_bonus4.png"),pygame.image.load("vida_bonus5.png"),]
 tempos_spawn_bonus=10000
 
 
@@ -81,6 +90,7 @@ som_colisao=pygame.mixer.Sound("hit.ogg")
 som_dano=pygame.mixer.Sound("dano.ogg")
 som_morte=pygame.mixer.Sound("morri.ogg")
 som_upgrade=pygame.mixer.Sound("powerup.ogg")
+
 #Jogador
 velocidade_jogador=550
 rotacao_jogador=300
@@ -267,7 +277,7 @@ class Cam:
         y = max(-(self.altura - altura), y)  
         self.camera = pygame.Rect(x, y, self.largura, self.altura)
         
-#inimigos
+#inimigo 1
 class Inimigo_1(pygame.sprite.Sprite):
     def __init__(self, loopPrincipal, x, y):
         self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
@@ -333,6 +343,7 @@ class Inimigo_1(pygame.sprite.Sprite):
                 highscore['Highscore'] = self.game.score            
             self.kill()
             
+#inimigo 2
 class Inimigo_2(pygame.sprite.Sprite):
     def __init__(self, loopPrincipal, x, y):
         self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
@@ -349,6 +360,7 @@ class Inimigo_2(pygame.sprite.Sprite):
         self.rotacao=0
         self.rotacao_velocidade=100
         self.vida=vida_inimigo
+        self.probabilidade_vida=random.randint(1,100)
 
     def update(self,surface):
         self.rotacao=(self.rotacao+self.rotacao_velocidade*dt)%360
@@ -370,10 +382,60 @@ class Inimigo_2(pygame.sprite.Sprite):
             som_explosao.play()
             inimugos_2.pop(1)
             self.game.score += 30
+            
+            if self.game.jogador.vidas < 5:
+                if 1 <= self.probabilidade_vida <=50:
+                    Bonus_vida(self.game,self.posicao.x,self.posicao.y)            
+            
             if self.game.score > highscore['Highscore']:
                 highscore['Highscore'] = self.game.score            
             self.kill()
             
+#Boss 1
+class Boss_1(pygame.sprite.Sprite):
+    def __init__(self, loopPrincipal, x, y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+        self.image=imagem_boss_1
+        self.imagem=self.image
+        self.rect=self.image.get_rect()
+        self.hitbox_rect=hitbox_inimigo.copy()
+        self.hitbox_rect.center = self.rect.center  
+        self.posicao=vector(x,y)*tamanho_tile
+        self.velocidade=vector(0,0)
+        self.aceleracao=vector(0,0)
+        self.rect.center=self.posicao
+        self.rotacao=0
+        self.vida=vida_boss
+        
+    def update(self,surface):
+        self.rotacao=(self.game.jogador.posicao-self.posicao).angle_to(vector(1,0))
+        self.image=pygame.transform.rotate(self.imagem,self.rotacao)
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+
+        self.aceleracao=vector(1,0).rotate(-self.rotacao)
+        self.aceleracao.scale_to_length(random.choice(velocidade_inimigo))
+        self.aceleracao=self.aceleracao+self.velocidade*-1
+        self.velocidade=self.velocidade+self.aceleracao*dt
+        
+        self.posicao=self.posicao+self.velocidade*dt+0.5*self.aceleracao*dt**2
+        self.hitbox_rect.centerx=self.posicao.x
+        parede_colisao(self,self.game.limitadores,'x')
+        self.hitbox_rect.centery=self.posicao.y
+        parede_colisao(self,self.game.limitadores,'y')
+        
+        self.rect.center=self.hitbox_rect.center
+        if self.vida <= 0:
+            som_explosao.play()
+            self.game.score += 100
+            boss_list.pop(0)
+            self.bonus_2=Bonus_2(self.game,self.posicao.x,self.posicao.y)
+            
+            if self.game.score > highscore['Highscore']:
+                highscore['Highscore'] = self.game.score            
+            self.kill()        
 #Tiro
 class Tiro(pygame.sprite.Sprite):
     
@@ -457,7 +519,26 @@ class Bonus_2(pygame.sprite.Sprite):
         surface.blit(random.choice(imagem_bonus_2),self.rect)        
         if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
             self.kill()
-    
+class Bonus_vida(pygame.sprite.Sprite):
+    def __init__ (self,loopPrincipal,x,y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.bonusvida
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+
+        self.spawn=pygame.time.get_ticks()
+        self.image=random.choice(imagem_bonus_vida)
+        self.rect=self.image.get_rect()
+        self.posicao=vector(x,y)
+
+    def update(self,surface):
+        for img in imagem_bonus_vida:
+            self.image=img
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+        surface.blit(self.image,self.rect)        
+        if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
+            self.kill()
+
 #Contador de vidas
 def vida_jogador(surface,x,y,vidas,imagem1,imagem2):
     for i in range(vidas):
@@ -488,6 +569,7 @@ class loopPrincipal:
         self.spawn=pygame.time.get_ticks()
         self.tiro_especial_1=False
         self.tiro_especial_2=False
+        self.vidabonus=False
         
         
         
@@ -499,14 +581,18 @@ class loopPrincipal:
         self.tiros=pygame.sprite.Group()
         self.bonus=pygame.sprite.Group()
         self.bonus2=pygame.sprite.Group()
+        self.bonusvida=pygame.sprite.Group()
+        self.boss1=pygame.sprite.Group()
         
         global inimugos_1
         global inimugos_2
+        global boss_list
         global lista_linhas
         global lista_colunas
         
         inimugos_1=[]
         inimugos_2=[]
+        boss_list=[]
         lista_linhas=[]
         lista_colunas=[]
         
@@ -549,6 +635,7 @@ class loopPrincipal:
                 som_dano.play()
                 hit.velocidade=vector(0,0)
                 self.jogador.vidas=self.jogador.vidas-1  
+                print(self.jogador.vidas)
                 self.ultimo_hit=pygame.time.get_ticks()
                 self.imunidade=True
                 
@@ -604,6 +691,17 @@ class loopPrincipal:
                 hit.vida=hit.vida-3 
             hit.velocidade=vector(0,0)
                            
+        if self.jogador.vidas < 5:
+            self.vidabonus=False
+        
+        
+        if self.vidabonus==False :                  
+            if pygame.sprite.spritecollide(self.jogador,self.bonusvida,False,colidiu_func):
+                som_upgrade.play()
+                self.jogador.vidas+=1
+                self.vidabonus=True
+            
+               
             
     def blitar(self):
         if self.gameover==False:
@@ -653,6 +751,11 @@ class loopPrincipal:
             while len(inimugos_2)<3:
                 self.inimigo_2=Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas))
                 inimugos_2.append(self.inimigo_2)   
+                
+        if  500 < self.score :
+            while len(boss_list) < 1:
+                self.boss1=Boss_1(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                boss_list.append(self.boss1)
 
 
         elif self.gameover==True:
