@@ -7,8 +7,7 @@ Created on Sat Apr 28 17:20:02 2018
 
 import pygame,sys,time,random
 from pygame.locals import *
-from Jogo import *
-
+import Jogo
 
 def menu():
     pygame.init()
@@ -23,7 +22,7 @@ def menu():
     
     pygame.display.set_caption("Guerra da Geometria")
     tela = pygame.display.set_mode((800,600))
-    fundo=pygame.image.load('fundo.jpg')
+    fundo=pygame.image.load('fundo_menu.png')
     frames=30
     relogio=pygame.time.Clock()
     
@@ -42,7 +41,7 @@ def menu():
     exit=sair  
     
     #Musicas
-    musica1="tema.mp3"
+    musica1="musica.mp3"
     pygame.mixer.music.load(musica1) #MÃºsica
     pygame.mixer.music.play(-1)    
     
@@ -122,10 +121,9 @@ def menu():
             
                 elif markerp==1 and event.key==pygame.K_RETURN:
                     som_select.play()
-                    jogo = loopPrincipal()
+                    jogo = Jogo.loopPrincipal()
                     jogo.dar_load()
                     jogo.roda()  
-                    #jogo.GameOver()
             
                 elif markerp==3 and event.key==pygame.K_RETURN:
                     som_select.play()
@@ -135,7 +133,6 @@ def menu():
             mov=mov+1
             pygame.display.update()            
                     
-     
 #Rodar o jogo automaticamente
 if __name__=="__main__":
     menu()

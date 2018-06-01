@@ -25,7 +25,7 @@ dt=clock.tick(fps) / 1000.0
 
 vector=pygame.math.Vector2
 
-imagem_fundo=pygame.image.load("fundo.jpg")
+imagem_fundo=pygame.image.load("fundo_jogo.png")
 imagem_borda=pygame.image.load("borda.png")
 
 #score
@@ -52,6 +52,8 @@ chance_inimigo=0.25
 
 #tiro
 imagem_tiro=pygame.image.load("bala_teste.png")
+imagem_tiro_1=pygame.image.load("bala_1.png")
+imagem_tiro_2=pygame.image.load("bala_2.png")
 velocidade_tiro=700
 tempos_spawn_tiro=2000
 firerate_tiro=150
@@ -62,6 +64,14 @@ tamanho_tile=32
 altura_grid=altura/tamanho_tile
 largura_grid=largura/tamanho_tile
 
+#bonus
+imagem_bonus=[pygame.image.load("bonus1.png"),pygame.image.load("bonus2.png"),pygame.image.load("bonus3.png"),pygame.image.load("bonus4.png"),pygame.image.load("bonus5.png"),pygame.image.load("bonus6.png"),pygame.image.load("bonus7.png"),pygame.image.load("bonus8.png"),pygame.image.load("bonus9.png"),pygame.image.load("bonus10.png"),pygame.image.load("bonus11.png"),pygame.image.load("bonus12.png"),]
+imagem_bonus_2=[pygame.image.load("bonus2_1.png"),pygame.image.load("bonus2_2.png"),pygame.image.load("bonus2_3.png"),pygame.image.load("bonus2_4.png"),pygame.image.load("bonus2_5.png"),pygame.image.load("bonus2_6.png"),pygame.image.load("bonus2_7.png"),pygame.image.load("bonus2_8.png"),pygame.image.load("bonus2_9.png"),pygame.image.load("bonus2_10.png"),pygame.image.load("bonus2_11.png"),pygame.image.load("bonus2_12.png"),]
+tempos_spawn_bonus=10000
+
+
+probabilidade_2=random.randint(1,100)
+
 #Sons
 jogo="tema.mp3"
 GameOver="GameOver.mp3"
@@ -70,13 +80,11 @@ som_tiro=pygame.mixer.Sound("tiro.ogg")
 som_colisao=pygame.mixer.Sound("hit.ogg")
 som_dano=pygame.mixer.Sound("dano.ogg")
 som_morte=pygame.mixer.Sound("morri.ogg")
-
+som_upgrade=pygame.mixer.Sound("powerup.ogg")
 #Jogador
 velocidade_jogador=550
 rotacao_jogador=300
 vidas_jogador=5
-#imagem_jogador=pygame.image.load("3.png")
-#imagem_jogador=[pygame.image.load("sprite_0.png"),pygame.image.load("sprite_1.png"),pygame.image.load("sprite_2.png"),pygame.image.load("sprite_3.png"),pygame.image.load("sprite_4.png"),pygame.image.load("sprite_5.png"),pygame.image.load("sprite_6.png")]
 imagem_jogador=pygame.image.load("sprite_0.png")
 imagem_imune=[pygame.image.load("sprite_0.png"),pygame.image.load("imune.png")]
 hitbox_jogador=pygame.Rect(0,0,18,30)
@@ -106,6 +114,7 @@ class jogador(pygame.sprite.Sprite):
         self.rotacao=0
         self.ultimo=0#tiro
         self.vidas=vidas_jogador
+        self.atirou=False
         
     #Cria movimentação de acordo com as teclas
     #Adiciona rotação
@@ -125,13 +134,14 @@ class jogador(pygame.sprite.Sprite):
         if key[pygame.K_DOWN]:
             self.velocidade=vector(-velocidade_jogador,0).rotate(-self.rotacao)
         if key[pygame.K_SPACE]:
+            self.atirou=True
             momento=pygame.time.get_ticks()
             if momento - self.ultimo > firerate_tiro:
                 som_tiro.play()
                 self.ultimo=momento
                 dir=vector(1,0).rotate(-self.rotacao)
                 posicao_tiro=self.posicao+tiro_frente.rotate(-self.rotacao)
-                Tiro(self.game,posicao_tiro,dir)
+                self.Tiro=Tiro(self.game,posicao_tiro,dir)
             
     #Colisao com os limites do mapa  
     def parede_colisao(self, dir):
@@ -163,7 +173,6 @@ class jogador(pygame.sprite.Sprite):
         
         #Define a rotaçao da imagem sem distorcer
         #Centraliza o rect para ter uma rotação "Smooth"
-        #self.image=pygame.transform.rotate(random.choice(imagem_jogador),self.rotacao)
         if self.game.imunidade==False:
             self.image=pygame.transform.rotate(imagem_jogador,self.rotacao)
             self.rect=self.image.get_rect(center=self.rect.center)
@@ -249,8 +258,8 @@ class Cam:
         return entity.rect.move(self.camera.topleft)
 
     def update(self, player):
-        x = -player.rect.centerx + int(largura/ 2)
-        y = -player.rect.centery + int(altura/ 2)
+        x = -player.rect.centerx + int(metade_largura)
+        y = -player.rect.centery + int(metade_altura)
 
         x = min(0, x)  
         y = min(0, y)  
@@ -275,6 +284,9 @@ class Inimigo_1(pygame.sprite.Sprite):
         self.rect.center=self.posicao
         self.rotacao=0
         self.vida=vida_inimigo
+        self.probabilidade_1=random.randint(1,100)
+        self.probabilidade_2=random.randint(1,100)
+        
         
     def desviar_inimigos(self):
         for enemie in self.game.inimigos:
@@ -305,12 +317,22 @@ class Inimigo_1(pygame.sprite.Sprite):
         self.rect.center=self.hitbox_rect.center
         if self.vida <= 0:
             som_explosao.play()
-            inimugos_1.pop(1)
+            inimugos_1.pop(0)
             self.game.score += 10
+            
+            if self.game.tiro_especial_1==False:
+                if 1 <= self.probabilidade_1 <=25:
+                    self.bonus_1=Bonus_1(self.game,self.posicao.x,self.posicao.y)
+                    
+            if self.game.tiro_especial_2==False:
+                if 26 <= self.probabilidade_2 <=50:
+                    self.bonus_2=Bonus_2(self.game,self.posicao.x,self.posicao.y)
+            
+            
             if self.game.score > highscore['Highscore']:
                 highscore['Highscore'] = self.game.score            
             self.kill()
-
+            
 class Inimigo_2(pygame.sprite.Sprite):
     def __init__(self, loopPrincipal, x, y):
         self.groups =loopPrincipal.all_sprites, loopPrincipal.inimigos
@@ -347,13 +369,14 @@ class Inimigo_2(pygame.sprite.Sprite):
         if self.vida <= 0:
             som_explosao.play()
             inimugos_2.pop(1)
-            self.game.score += 10
+            self.game.score += 30
             if self.game.score > highscore['Highscore']:
                 highscore['Highscore'] = self.game.score            
             self.kill()
             
 #Tiro
 class Tiro(pygame.sprite.Sprite):
+    
     
     def __init__(self, loopPrincipal, posicao, dir):
         self.groups =loopPrincipal.all_sprites, loopPrincipal.tiros
@@ -366,18 +389,75 @@ class Tiro(pygame.sprite.Sprite):
         self.velocidade=dir*velocidade_tiro
         self.spawn=pygame.time.get_ticks()
         self.rotacao=0
+        self.firerate=150
+        self.dano=1
+        self.tiro=0
         
     def update(self,surface):
-        #self.rotacao=(self.game.jogador.posicao+self.posicao).angle_to(vector(1,0))
+        if self.tiro==0:
+            self.dano=1
+            self.image=imagem_tiro
+            
+        if self.tiro==1:
+            self.dano=2
+            self.image=imagem_tiro_1
+            self.firerate=100
+            
+        if self.tiro==2:
+            self.dano=3
+            self.image=imagem_tiro_2 
+            self.firerate=80
+            
+        self.rotacao=self.game.jogador.rotacao
+        self.image=pygame.transform.rotate(self.image,self.rotacao)
         self.posicao=self.posicao+self.velocidade*dt
         self.rect.center=self.posicao
-        #self.image=pygame.transform.rotate(self.image,self.rotacao)
         if pygame.sprite.spritecollideany(self,self.game.limitadores):
             self.kill()
-        
         if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
             self.kill()
             
+                  
+            
+#bonus
+class Bonus_1(pygame.sprite.Sprite):
+    def __init__ (self,loopPrincipal,x,y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.bonus
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+        
+        self.spawn=pygame.time.get_ticks()
+        self.image=random.choice(imagem_bonus)
+        self.rect=self.image.get_rect()
+        self.posicao=vector(x,y)
+        
+    def update(self,surface):
+        self.image=random.choice(imagem_bonus)
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+        surface.blit(random.choice(imagem_bonus),self.rect)        
+        if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
+            self.kill()
+            
+class Bonus_2(pygame.sprite.Sprite):
+    def __init__ (self,loopPrincipal,x,y):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.bonus2
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game=loopPrincipal
+        
+        self.spawn=pygame.time.get_ticks()
+        self.image=random.choice(imagem_bonus_2)
+        self.rect=self.image.get_rect()
+        self.posicao=vector(x,y)
+        
+    def update(self,surface):
+        self.image=random.choice(imagem_bonus_2)
+        self.rect=self.image.get_rect()
+        self.rect.center=self.posicao
+        surface.blit(random.choice(imagem_bonus_2),self.rect)        
+        if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
+            self.kill()
+    
 #Contador de vidas
 def vida_jogador(surface,x,y,vidas,imagem1,imagem2):
     for i in range(vidas):
@@ -388,8 +468,6 @@ def vida_jogador(surface,x,y,vidas,imagem1,imagem2):
         imagem1_rect.y=y
         
         surface.blit(imagem1,imagem1_rect)
-#Game over
-#--------------------------------------------------------------------------------------------------------------------
 #Loop principal
 class loopPrincipal:
     def __init__(self):
@@ -407,12 +485,20 @@ class loopPrincipal:
         self.rodar=True
         self.gameover=False 
         self.placar=0
+        self.spawn=pygame.time.get_ticks()
+        self.tiro_especial_1=False
+        self.tiro_especial_2=False
+        
+        
+        
         
     def dar_load(self):
         self.all_sprites=pygame.sprite.Group()
         self.limitadores=pygame.sprite.Group()
         self.inimigos=pygame.sprite.Group()
         self.tiros=pygame.sprite.Group()
+        self.bonus=pygame.sprite.Group()
+        self.bonus2=pygame.sprite.Group()
         
         global inimugos_1
         global inimugos_2
@@ -430,9 +516,9 @@ class loopPrincipal:
                     Limite_fisico(self.tela,self,colunas,linhas)
                 if tile_2=="J":
                     self.jogador=jogador(self,colunas,linhas)
-                if 1<colunas<64:
+                if 3<colunas<60:
                     lista_colunas.append(colunas)
-                if 1<linhas<40:
+                if 3<linhas<38:
                     lista_linhas.append(linhas)                            
                         
         self.camera=Cam(self.map.largura,self.map.altura)
@@ -445,7 +531,6 @@ class loopPrincipal:
                 self.update()
             self.blitar()      
         
-            
     def sair(self):
         pygame.quit()
         sys.exit()
@@ -473,12 +558,52 @@ class loopPrincipal:
                     self.score = 0 
                     self.gameover=True
                     pygame.mixer.music.load("GameOver.mp3")
-                    pygame.mixer.music.play(-1) 
+                    pygame.mixer.music.play(-1)
+                    
+        if self.jogador.atirou==True:
+            if pygame.time.get_ticks() - self.spawn > 20000:
+                self.jogador.Tiro.tiro=0
+                self.tiro_especial_1=False
+                self.tiro_especial_2=False
+        
+        if self.tiro_especial_1==False:
+            hitou =  pygame.sprite.spritecollide(self.jogador,self.bonus,False,colidiu_func)
+            for hit in hitou:
+                som_upgrade.play()
+                self.spawn=pygame.time.get_ticks()
+                self.score+=20
+                self.tiro_especial_1=True
+                hit.kill()
+                
+        if self.tiro_especial_1==True:
+            self.jogador.Tiro.tiro=1
             
+        
+            
+    
+        if self.tiro_especial_2==False:
+            hitou =  pygame.sprite.spritecollide(self.jogador,self.bonus2,False,colidiu_func)
+            for hit in hitou:
+                som_upgrade.play()
+                self.spawn=pygame.time.get_ticks()
+                self.score+=20
+                self.tiro_especial_2=True
+                hit.kill()
+    
+        if self.tiro_especial_2==True:
+            self.jogador.Tiro.tiro=2        
+            
+                        
         hitou=pygame.sprite.groupcollide(self.inimigos,self.tiros,False,True)
         for hit in hitou:
-            hit.vida=hit.vida-dano_tiro  
+            if self.jogador.Tiro.tiro==0:
+                hit.vida=hit.vida-1
+            if self.jogador.Tiro.tiro==1:
+                hit.vida=hit.vida-2 
+            if self.jogador.Tiro.tiro==2:
+                hit.vida=hit.vida-3 
             hit.velocidade=vector(0,0)
+                           
             
     def blitar(self):
         if self.gameover==False:
@@ -492,11 +617,44 @@ class loopPrincipal:
             self.placar=self.score
             self.tela.blit(scoretext, (5,10))        
             vida_jogador(self.tela,largura-150,5,self.jogador.vidas,imagem_vidacheia,imagem_vidavazia)        
-            
+        
+        if self.score <= 300:
             while len(inimugos_1)<5:
-                inimugos_1.append(Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas)))   
+                self.inimigo_1=Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_1.append(self.inimigo_1)  
+
             while len(inimugos_2)<3:
-                inimugos_2.append(Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas)))
+                self.inimigo_2=Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_2.append(self.inimigo_2)     
+                
+        if 300 < self.score < 500:
+            while len(inimugos_1)<7:
+                self.inimigo_1=Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_1.append(self.inimigo_1)  
+        
+            while len(inimugos_2)<4:
+                self.inimigo_2=Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_2.append(self.inimigo_2)  
+
+        if 500 < self.score < 1000:
+            while len(inimugos_1)<10:
+                self.inimigo_1=Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_1.append(self.inimigo_1)  
+    
+            while len(inimugos_2)<3:
+                self.inimigo_2=Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_2.append(self.inimigo_2) 
+                
+        if 1000 < self.score :
+            while len(inimugos_1)<12:
+                self.inimigo_1=Inimigo_1(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_1.append(self.inimigo_1)  
+    
+            while len(inimugos_2)<3:
+                self.inimigo_2=Inimigo_2(self,random.choice(lista_colunas),random.choice(lista_linhas))
+                inimugos_2.append(self.inimigo_2)   
+
+
         elif self.gameover==True:
             self.GameOver()
         
@@ -522,20 +680,15 @@ class loopPrincipal:
         self.tela.blit(self.text_3,(150,330))         
                 
         key = pygame.key.get_pressed()
+        
         if key[pygame.K_m]:
             menu.menu()
+        
         if key[pygame.K_r]: 
             jogo = loopPrincipal()
             jogo.dar_load()
             jogo.roda()            
-        
-#Função chamada pelo menu para iniciar o jogo
-#def start():
 
-#jogo = loopPrincipal()
 
-#while True:
-#    jogo.dar_load()
-#    jogo.roda()
 #--------------------------------------------------------------------------------------------------------------------
 firebase.patch('/Estoque',highscore) #colocar quando morrer
