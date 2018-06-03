@@ -49,11 +49,13 @@ vida_inimigo=3
 dano_inimigo=1
 raio_desvio=50
 chance_inimigo=0.25
+imagem_bala_inimigo=pygame.image.load("bala_inimigo.png")
+
 
 #boss 1
-imagem_boss_1=pygame.image.load("boss_1.png")
+imagem_boss_1=pygame.image.load("inimigo_maior1.png")
 velocidade_boss=100
-hitbox_boss_1=pygame.Rect(0,0,50,50)
+hitbox_boss_1=pygame.Rect(0,0,30,30)
 vida_boss=50
 dano_boss=2
 
@@ -90,6 +92,7 @@ som_colisao=pygame.mixer.Sound("hit.ogg")
 som_dano=pygame.mixer.Sound("dano.ogg")
 som_morte=pygame.mixer.Sound("morri.ogg")
 som_upgrade=pygame.mixer.Sound("powerup.ogg")
+som_tiro_inimigo=pygame.mixer.Sound("tiro_inimigo.ogg")
 
 #Jogador
 velocidade_jogador=550
@@ -303,8 +306,10 @@ class Inimigo_1(pygame.sprite.Sprite):
             if enemie != self:
                 distancia=self.posicao - enemie.posicao
                 if 0 < distancia.length() < raio_desvio:
+                    
                     self.aceleracao=self.aceleracao+distancia.normalize()
-        
+    
+
     def update(self,surface):
         self.rotacao=(self.game.jogador.posicao-self.posicao).angle_to(vector(1,0))
         self.image=pygame.transform.rotate(self.imagem,self.rotacao)
@@ -314,6 +319,7 @@ class Inimigo_1(pygame.sprite.Sprite):
         #self.aceleracao=vector(velocidade_inimigo,0).rotate(-self.rotacao)
         self.aceleracao=vector(1,0).rotate(-self.rotacao)
         self.desviar_inimigos()
+
         self.aceleracao.scale_to_length(random.choice(velocidade_inimigo))
         self.aceleracao=self.aceleracao+self.velocidade*-1
         self.velocidade=self.velocidade+self.aceleracao*dt
@@ -400,7 +406,7 @@ class Boss_1(pygame.sprite.Sprite):
         self.image=imagem_boss_1
         self.imagem=self.image
         self.rect=self.image.get_rect()
-        self.hitbox_rect=hitbox_inimigo.copy()
+        self.hitbox_rect=hitbox_boss_1.copy()
         self.hitbox_rect.center = self.rect.center  
         self.posicao=vector(x,y)*tamanho_tile
         self.velocidade=vector(0,0)
@@ -408,14 +414,31 @@ class Boss_1(pygame.sprite.Sprite):
         self.rect.center=self.posicao
         self.rotacao=0
         self.vida=vida_boss
+        self.ultimo=0
+    
+    def desviar_inimigos(self):
+        for enemie in self.game.inimigos:
+            if enemie != self:
+                distancia=self.posicao - enemie.posicao
+                if 0 < distancia.length() < 150:
+                    self.aceleracao=self.aceleracao+distancia.normalize()
         
     def update(self,surface):
+        momento=pygame.time.get_ticks()
+        if momento - self.ultimo > 1000:
+            som_tiro_inimigo.play()
+            dir=vector(1,0).rotate(-self.rotacao)
+            posicao_tiro=self.posicao+tiro_frente.rotate(-self.rotacao)
+            self.Tiro_inimigo=Tiro_inimigo(self.game,posicao_tiro,dir)   
+            self.ultimo=momento
+            
         self.rotacao=(self.game.jogador.posicao-self.posicao).angle_to(vector(1,0))
         self.image=pygame.transform.rotate(self.imagem,self.rotacao)
         self.rect=self.image.get_rect()
         self.rect.center=self.posicao
 
         self.aceleracao=vector(1,0).rotate(-self.rotacao)
+        self.desviar_inimigos()
         self.aceleracao.scale_to_length(random.choice(velocidade_inimigo))
         self.aceleracao=self.aceleracao+self.velocidade*-1
         self.velocidade=self.velocidade+self.aceleracao*dt
@@ -481,6 +504,33 @@ class Tiro(pygame.sprite.Sprite):
             
                   
             
+class Tiro_inimigo(pygame.sprite.Sprite):
+    
+    def __init__(self, loopPrincipal, posicao, dir):
+        self.groups =loopPrincipal.all_sprites, loopPrincipal.tiros_inimigo
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.game = loopPrincipal
+        self.image = imagem_bala_inimigo
+        self.rect=self.image.get_rect()
+        self.posicao=vector(posicao)
+        self.rect.center=posicao
+        self.velocidade=dir*velocidade_tiro
+        self.spawn=pygame.time.get_ticks()
+        self.rotacao=0
+        self.firerate=150
+        self.dano=1
+        self.tiro=0
+        
+    def update(self,surface):
+        self.rotacao=self.game.boss1.rotacao
+        self.image=pygame.transform.rotate(imagem_bala_inimigo,self.rotacao)
+        self.posicao=self.posicao+self.velocidade*dt
+        self.rect.center=self.posicao
+        if pygame.sprite.spritecollideany(self,self.game.limitadores):
+            self.kill()
+                  
+        if pygame.time.get_ticks()-self.spawn > tempos_spawn_tiro:
+            self.kill()
 #bonus
 class Bonus_1(pygame.sprite.Sprite):
     def __init__ (self,loopPrincipal,x,y):
@@ -579,6 +629,7 @@ class loopPrincipal:
         self.limitadores=pygame.sprite.Group()
         self.inimigos=pygame.sprite.Group()
         self.tiros=pygame.sprite.Group()
+        self.tiros_inimigo=pygame.sprite.Group()
         self.bonus=pygame.sprite.Group()
         self.bonus2=pygame.sprite.Group()
         self.bonusvida=pygame.sprite.Group()
@@ -635,9 +686,26 @@ class loopPrincipal:
                 som_dano.play()
                 hit.velocidade=vector(0,0)
                 self.jogador.vidas=self.jogador.vidas-1  
-                print(self.jogador.vidas)
                 self.ultimo_hit=pygame.time.get_ticks()
                 self.imunidade=True
+                
+                if self.jogador.vidas<= 0:
+                    som_morte.play()
+                    firebase.patch('/Estoque',highscore)
+                    self.score = 0 
+                    self.gameover=True
+                    pygame.mixer.music.load("GameOver.mp3")
+                    pygame.mixer.music.play(-1)
+                    
+        if self.imunidade==False:
+            hitou=pygame.sprite.spritecollide(self.jogador,self.tiros_inimigo,False,colidiu_func)
+            for hit in hitou:
+                som_dano.play()
+                hit.velocidade=vector(0,0)
+                self.jogador.vidas=self.jogador.vidas-1  
+                self.ultimo_hit=pygame.time.get_ticks()
+                self.imunidade=True
+                self.boss1.Tiro_inimigo.kill()
                 
                 if self.jogador.vidas<= 0:
                     som_morte.play()
